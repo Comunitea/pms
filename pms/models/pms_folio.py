@@ -699,10 +699,6 @@ class PmsFolio(models.Model):
                         )
                         invoice_lines_vals.append(invoice_down_payment_vals)
 
-                if not any(
-                    new_line["display_type"] is False for new_line in invoice_lines_vals
-                ):
-                    raise self._nothing_to_invoice_error()
                 invoice_vals["invoice_line_ids"] = [
                     (0, 0, invoice_line_id) for invoice_line_id in invoice_lines_vals
                 ]
@@ -2103,7 +2099,7 @@ class PmsFolio(models.Model):
                     default_company_id=self.company_id.id,
                     default_pms_property_id=self.pms_property_id.id,
                 )
-                ._get_default_journal()
+                ._search_default_journal()
             )
         if not journal:
             raise UserError(
@@ -2136,7 +2132,8 @@ class PmsFolio(models.Model):
             "payment_reference": self.name,
             "fiscal_position_id": self.env["account.fiscal.position"]
             .with_company(self.company_id.id)
-            .get_fiscal_position(partner_invoice_id),
+            ._get_fiscal_position(self.env["res.partner"].browse(partner_invoice_id))
+            .id,
         }
         return invoice_vals
 
@@ -2736,7 +2733,7 @@ class PmsFolio(models.Model):
 
             # Check payment_token/acquirer matching or take the acquirer from token
             if acquirer_id:
-                acquirer = self.env["payment.acquirer"].browse(acquirer_id)
+                acquirer = self.env["payment.provider"].browse(acquirer_id)
                 if payment_token and payment_token.acquirer_id != acquirer:
                     raise ValidationError(
                         _("Invalid token found! Token acquirer %s != %s")
@@ -2757,7 +2754,7 @@ class PmsFolio(models.Model):
             )
 
         if not acquirer:
-            acquirer = self.env["payment.acquirer"].browse(acquirer_id)
+            acquirer = self.env["payment.provider"].browse(acquirer_id)
 
         # Check a journal is set on acquirer.
         if not acquirer.journal_id:
