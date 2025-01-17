@@ -193,6 +193,7 @@ class AccountMove(models.Model):
         journal = super(AccountMove, self)._search_default_journal()
         company_id = self._context.get("default_company_id", self.env.company.id)
         company = self.env["res.company"].browse(company_id)
+        journal_type = self._context.get("default_journal_type", journal.type)
         pms_property_id = self.env.context.get(
             "default_pms_property_id", self.pms_property_id.id
         ) or (
@@ -204,18 +205,21 @@ class AccountMove(models.Model):
             domain = [
                 ("company_id", "=", pms_property.company_id.id),
                 ("pms_property_ids", "in", pms_property.id),
+                ("type", "=", journal_type),
             ]
             journal = self.env["account.journal"].search(domain, limit=1)
             if not journal:
                 domain = [
                     ("company_id", "=", pms_property.company_id.id),
                     ("pms_property_ids", "=", False),
+                    ("type", "=", journal_type),
                 ]
                 journal = self.env["account.journal"].search(domain, limit=1)
         else:
             domain = [
                 ("company_id", "=", company_id),
                 ("pms_property_ids", "=", False),
+                ("type", "=", journal_type),
             ]
             journal = self.env["account.journal"].search(domain, limit=1)
         if not journal:
